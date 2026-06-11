@@ -81,7 +81,7 @@
   const W = 1100, H = 520;
   canvas.width = W; canvas.height = H;
 
-  const RAIL = 44, POCKET_R = 22, BALL_R = 11, MAX_POWER = 20;
+  const RAIL = 44, POCKET_R = 22, BALL_R = 11, MAX_POWER = 28;
 
   const LEFT   = RAIL + 56;
   const RIGHT  = W - RAIL - 54;
@@ -99,7 +99,7 @@
   // ==================== Matter.js ====================
   const engine = Engine.create({ gravity: { x: 0, y: 0 } });
   const world = engine.world;
-  const BALL_OPTS = { restitution: 0.98, friction: 0.008, frictionAir: 0.012, density: 0.002, slop: 0.005 };
+  const BALL_OPTS = { restitution: 0.99, friction: 0.005, frictionAir: 0.01, density: 0.0018, slop: 0.003 };
 
   Events.on(engine, 'collisionStart', (event) => {
     for (const pair of event.pairs) {
@@ -435,7 +435,7 @@
     if (!cueBall || power <= 0.03) return;
     gameMessage = '';
     cueBallHitBall = false;
-    const forceMag = power * 0.0012;
+    const forceMag = power * 0.0022;
     const fx = Math.cos(aimAngle) * forceMag, fy = Math.sin(aimAngle) * forceMag;
     const fwdX = Math.cos(aimAngle), fwdY = Math.sin(aimAngle);
     const rX = -Math.sin(aimAngle), rY = Math.cos(aimAngle);
