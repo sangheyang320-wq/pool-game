@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>小胖桌球</title>
+<title>桑圆月桌球</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; overflow-x: hidden; }
@@ -39,7 +39,7 @@
 <meta name="theme-color" content="#1a1a2e">
 </head>
 <body>
-<h1>小胖桌球</h1>
+<h1>桑圆月桌球</h1>
 <div id="info">🖱️ 按住桌面拖拽瞄准→松开锁定 | 📊 右侧力度条发球 | 🎯 左侧加塞图标 | R 重置</div>
 <div id="panel">
   <div class="player active" id="p1box">
@@ -99,7 +99,7 @@
   // ==================== Matter.js ====================
   const engine = Engine.create({ gravity: { x: 0, y: 0 } });
   const world = engine.world;
-  const BALL_OPTS = { restitution: 0.99, friction: 0.005, frictionAir: 0.01, density: 0.0018, slop: 0.003 };
+  const BALL_OPTS = { restitution: 0.90, friction: 0.005, frictionAir: 0.01, density: 0.0018, slop: 0.003 };
 
   Events.on(engine, 'collisionStart', (event) => {
     for (const pair of event.pairs) {
@@ -124,7 +124,7 @@
   // ==================== 游戏状态 ====================
   let balls = [], railBodies = [];
   let mouseX = LEFT + TABLE_W * 0.3, mouseY = H / 2;
-  let aimAngle = Math.PI, aimLocked = false, aimDragging = false;
+  let aimAngle = 0, aimLocked = false, aimDragging = false;
   let power = 0, powerDragging = false;
   let englishX = 0, englishY = 0, englishPopupOpen = false;
   let anyMoving = false;
@@ -192,7 +192,7 @@
   // ==================== 墙壁 ====================
   function createRails() {
     const railOpts = { isStatic: true, restitution: 0.78, friction: 0.003 };
-    const thick = 12, gap = 38;
+    const thick = 20, gap = 38;
     const segs = [
       { x: (LEFT + LEFT + TABLE_W / 2 - gap) / 2, y: TOP - thick / 2, w: TABLE_W / 2 - gap, h: thick },
       { x: (LEFT + TABLE_W / 2 + gap + RIGHT) / 2, y: TOP - thick / 2, w: TABLE_W / 2 - gap, h: thick },
@@ -212,7 +212,7 @@
     World.clear(world, false);
     balls = []; gameOver = false; aimLocked = false;
     englishX = 0; englishY = 0; power = 0;
-    aimAngle = Math.PI;
+    aimAngle = 0;
     currentPlayer = 1; playerTypes = [null, null]; typesAssigned = false;
     p1Remaining = []; p2Remaining = []; turnContinued = false;
     gameMessage = ''; aimBlocked = false; aimWarning = '';
@@ -371,6 +371,7 @@
       if (Math.abs(v.x) < 0.02 && Math.abs(v.y) < 0.02) {
         Body.setVelocity(b.body, { x: 0, y: 0 });
         Body.setAngularVelocity(b.body, 0);
+        b.body.isBullet = false;
       }
     });
 
@@ -399,6 +400,7 @@
         if (!gameMessage) gameMessage = 'P' + currentPlayer + ' 继续击球';
         turnContinued = false; aimLocked = false; power = 0;
       }
+      cueBallHitBall = false;  // 重置，防止残留状态
     } else {
       checkPockets();
     }
@@ -435,7 +437,7 @@
     if (!cueBall || power <= 0.03) return;
     gameMessage = '';
     cueBallHitBall = false;
-    const forceMag = power * 0.0022;
+    const forceMag = power * 0.0018;
     const fx = Math.cos(aimAngle) * forceMag, fy = Math.sin(aimAngle) * forceMag;
     const fwdX = Math.cos(aimAngle), fwdY = Math.sin(aimAngle);
     const rX = -Math.sin(aimAngle), rY = Math.cos(aimAngle);
@@ -443,6 +445,7 @@
     const offX = fwdX * englishY * BALL_R * sm + rX * englishX * BALL_R * sm;
     const offY = fwdY * englishY * BALL_R * sm + rY * englishX * BALL_R * sm;
     const pos = cueBall.body.position;
+    cueBall.body.isBullet = true;  // CCD 防穿透
     Body.applyForce(cueBall.body, { x: pos.x + offX, y: pos.y + offY }, { x: fx, y: fy });
     power = 0;
     updatePanel();
@@ -645,11 +648,12 @@
     ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.strokeRect(BAR_X - 3, BAR_Y - 4, BAR_W + 6, BAR_H + 8);
     for (let i = 0; i <= 10; i++) {
       const y = BAR_Y + BAR_H * i / 10;
-      ctx.beginPath(); ctx.moveTo(BAR_X - 4, y); ctx.lineTo(BAR_X - (i % 5 === 0 ? 10 : 6), y);
-      ctx.strokeStyle = '#777'; ctx.lineWidth = 0.8; ctx.stroke();
+      // 刻度线画在条内部（向右延伸）
+      ctx.beginPath(); ctx.moveTo(BAR_X + 1, y); ctx.lineTo(BAR_X + (i % 5 === 0 ? BAR_W - 1 : 7), y);
+      ctx.strokeStyle = i % 5 === 0 ? '#aaa' : 'rgba(255,255,255,0.25)'; ctx.lineWidth = i % 5 === 0 ? 1.2 : 0.6; ctx.stroke();
       if (i % 5 === 0 && i > 0 && i < 10) {
-        ctx.fillStyle = '#888'; ctx.font = '9px Arial'; ctx.textAlign = 'right';
-        ctx.fillText((100 - i * 10) + '%', BAR_X - 14, y + 3);
+        ctx.fillStyle = '#aaa'; ctx.font = '9px Arial'; ctx.textAlign = 'left';
+        ctx.fillText((100 - i * 10) + '%', BAR_X + BAR_W + 4, y + 3);
       }
     }
 
@@ -756,13 +760,31 @@
       }
       ctx.setLineDash([6, 6]); ctx.beginPath();
       ctx.moveTo(cueBall.body.position.x, cueBall.body.position.y);
-      ctx.lineTo(cueBall.body.position.x + Math.cos(aimAngle) * 280, cueBall.body.position.y + Math.sin(aimAngle) * 280);
+      ctx.lineTo(cueBall.body.position.x + Math.cos(aimAngle) * 500, cueBall.body.position.y + Math.sin(aimAngle) * 500);
       ctx.strokeStyle = aimBlocked ? 'rgba(255,80,80,0.4)' : (aimLocked ? 'rgba(100,255,100,0.35)' : 'rgba(255,255,255,0.22)');
       ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
       drawCueStick(cueBall, aimAngle, power);
     }
 
     for (const b of balls) drawBall(b);
+
+    // 运动中球的方向线
+    if (anyMoving) {
+      for (const b of balls) {
+        const vx = b.body.velocity.x, vy = b.body.velocity.y;
+        const speed = Math.hypot(vx, vy);
+        if (speed < 0.15) continue;
+        const bx = b.body.position.x, by = b.body.position.y;
+        const len = Math.min(speed * 35, 80);
+        const nx = vx / speed, ny = vy / speed;
+        const alpha = Math.min(speed / 5, 0.55);
+        ctx.beginPath();
+        ctx.moveTo(bx + nx * b.r, by + ny * b.r);
+        ctx.lineTo(bx + nx * (b.r + len), by + ny * (b.r + len));
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 1.2; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
 
     if (placingCueBall) {
       const gx = Math.max(LEFT + BALL_R, Math.min(RIGHT - BALL_R, mouseX));
